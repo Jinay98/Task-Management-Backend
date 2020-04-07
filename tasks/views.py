@@ -8,8 +8,10 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework import status
 
+from projects.models import Project
 from tasks.models import Task
 from tasks.serializers import TaskSerializer
+import datetime
 
 
 @csrf_exempt
@@ -17,15 +19,28 @@ def task_list(request):
     if request.method == 'GET':
         tasks = Task.objects.all()
         tasks_serializer = TaskSerializer(tasks, many=True)
+
         return JsonResponse(tasks_serializer.data, safe=False)
 
     elif request.method == 'POST':
-        task_data = JSONParser().parse(request)
-        task_serializer = TaskSerializer(data=task_data)
-        if task_serializer.is_valid():
-            task_serializer.save()
-            return JsonResponse(task_serializer.data, status=status.HTTP_201_CREATED)
-        return JsonResponse(task_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            task_data = JSONParser().parse(request)
+            task_name = task_data.get('task_name', "default task name")
+            task_description = task_data.get('task_description', "default task description")
+            task_start_date = task_data.get('task_start_date', datetime.datetime.now())
+            if task_start_date == '':
+                task_start_date = datetime.datetime.now()
+            task_end_date = task_data.get('task_end_date', datetime.datetime.now())
+            if task_end_date == '':
+                task_end_date = datetime.datetime.now()
+            related_project_name = task_data.get('task_project_name', "default task description")
+            project = Project.objects.get(name=related_project_name)
+            task = Task(name=task_name, description=task_description, start_date=task_start_date,
+                        end_date=task_end_date, project=project)
+            task.save()
+            return HttpResponse(status=status.HTTP_201_CREATED)
+        except:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         Task.objects.all().delete()
@@ -44,14 +59,28 @@ def task_detail(request, pk):
         return JsonResponse(task_serializer.data)
 
     elif request.method == 'PUT':
-        project_data = JSONParser().parse(request)
-        task_serializer = TaskSerializer(task, data=project_data)
-        if task_serializer.is_valid():
-            task_serializer.save()
-            return JsonResponse(task_serializer.data)
-        return JsonResponse(task_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            task_data = JSONParser().parse(request)
+            task_name = task_data.get('task_name', "default task name")
+            task_description = task_data.get('task_description', "default task description")
+            task_start_date = task_data.get('task_start_date', datetime.datetime.now())
+            if task_start_date == '':
+                task_start_date = datetime.datetime.now()
+            task_end_date = task_data.get('task_end_date', datetime.datetime.now())
+            if task_end_date == '':
+                task_end_date = datetime.datetime.now()
+            related_project_name = task_data.get('task_project_name', "default task description")
+            project = Project.objects.get(name=related_project_name)
+            task.name = task_name
+            task.description = task_description
+            task.start_date = task_start_date
+            task.end_date = task_end_date
+            task.project = project
+            task.save()
+            return HttpResponse(status=status.HTTP_201_CREATED)
+        except:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST)
 
     elif request.method == 'DELETE':
         task.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
-
